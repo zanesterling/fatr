@@ -16,10 +16,10 @@ macro_rules! errorf {
 }
 
 fn main() {
-    let mut args = env::args();
-    let name = args.next().unwrap();
+    let mut arg_iter = env::args();
+    let name = arg_iter.next().unwrap();
     let command: String;
-    match args.next() {
+    match arg_iter.next() {
         Some(arg) => command = arg,
         None => {
             usage(name);
@@ -28,14 +28,15 @@ fn main() {
     }
 
     // check for command
+    let args: Vec<String> = arg_iter.collect();
     match command.as_ref() {
         "add" => {
-            if let Err(e) = add::add_file(&mut args) {
+            if let Err(e) = add::add_file(&args) {
                 error(e);
             }
         },
         "ls" => {
-            if let Err(e) = list::list_files(&mut args) {
+            if let Err(e) = list::list_files(&args) {
                 error(e);
             }
         },
@@ -49,7 +50,7 @@ fn main() {
 fn usage(name: String) {
     println!("{}:", name);
     println!("\tadd <file> <image>: Adds file to image.");
-    println!("\tls <image>: list files on image.");
+    println!("\tls <image> [flags]: list files on image.");
 }
 
 fn error(err: Box<error::Error>) {

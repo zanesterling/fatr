@@ -3,6 +3,9 @@ use std::fs;
 use std::io;
 use std::io::Read;
 use std::io::Write;
+use std::mem;
+
+use fat::RootEntry;
 
 const BYTES_PER_SECTOR: usize = 512;
 const SECTORS_PER_FAT: usize = 9;
@@ -15,6 +18,18 @@ const BYTES_PER_ROOT: usize
 const BYTES_PER_DATA_AREA: usize
     = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
 
+const BYTES_PER_ROOT_ENTRY: usize = 32;
+const MAX_ROOTDIR_ENTRIES: usize =
+    BYTES_PER_SECTOR * SECTORS_PER_ROOT / BYTES_PER_ROOT_ENTRY;
+#[test]
+fn test_root_entry_size() {
+    assert_eq!(
+        mem::size_of::<RootEntry>(),
+        BYTES_PER_ROOT_ENTRY
+    );
+}
+
+#[derive(Debug)]
 pub struct Image {
     boot_sector: Vec<u8>,
     fat_1: Vec<u8>,
@@ -71,5 +86,21 @@ impl Image {
         try!(file.write_all(&self.data_area));
 
         Ok(())
+    }
+
+    pub fn root_entries(&self) -> Vec<RootEntry> {
+        let mut entries = Vec::new();
+
+        let chunks = self.root_dir.chunks(BYTES_PER_ROOT_ENTRY);
+        for entry_slice in chunks {
+            let mut entry_bytes = [0; BYTES_PER_ROOT_ENTRY];
+            entry_bytes.clone_from_slice(entry_slice);
+
+            let entry: RootEntry;
+            unsafe { entry = mem::transmute(entry_bytes); }
+            entries.push(entry);
+        }
+
+        entries
     }
 }
