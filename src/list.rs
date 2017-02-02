@@ -1,10 +1,14 @@
 use std::error;
-use std::fs::File;
+use std::iter::Iterator;
 
-pub fn list_files(image_fn: &String)
+use fat;
+
+pub fn list_files(args: &mut Iterator<Item=String>)
     -> Result<(), Box<error::Error>>
 {
-    let img_file = File::open(image_fn);
+    let image_fn = args.next()
+        .ok_or("expected image filename")?;
+    let image = fat::Image::from(image_fn);
 
     Ok(())
 }

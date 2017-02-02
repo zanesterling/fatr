@@ -3,6 +3,7 @@ use std::error;
 use std::process;
 
 mod add;
+mod fat;
 mod list;
 
 macro_rules! errorf {
@@ -15,10 +16,10 @@ macro_rules! errorf {
 }
 
 fn main() {
-    let mut arg_iter = env::args();
-    let name = arg_iter.next().unwrap();
+    let mut args = env::args();
+    let name = args.next().unwrap();
     let command: String;
-    match arg_iter.next() {
+    match args.next() {
         Some(arg) => command = arg,
         None => {
             usage(name);
@@ -27,23 +28,14 @@ fn main() {
     }
 
     // check for command
-    let args: Vec<String> = arg_iter.collect();
     match command.as_ref() {
         "add" => {
-            if args.len() < 2 {
-                errorf!("usage: {} add <file> <image>", name);
-            }
-
-            if let Err(e) = add::add_file(&args[0], &args[1]) {
+            if let Err(e) = add::add_file(&mut args) {
                 error(e);
             }
         },
         "ls" => {
-            if args.len() < 1 {
-                errorf!("usage: {} ls <image>", name);
-            }
-
-            if let Err(e) = list::list_files(&args[0]) {
+            if let Err(e) = list::list_files(&mut args) {
                 error(e);
             }
         },

@@ -1,6 +1,6 @@
 use std::error;
 
-pub fn add_file(file_fn: &String, image_fn: &String)
+pub fn add_file(args: &mut Iterator<Item=String>)
     -> Result<(), Box<error::Error>>
 {
     Err(From::from("function not implemented yet"))
