@@ -51,11 +51,11 @@ impl Image {
 
     fn blank_image() -> Image {
         Image {
-            boot_sector: Vec::with_capacity(BYTES_PER_SECTOR),
-            fat_1: Vec::with_capacity(BYTES_PER_FAT),
-            fat_2: Vec::with_capacity(BYTES_PER_FAT),
-            root_dir: Vec::with_capacity(BYTES_PER_ROOT),
-            data_area: Vec::with_capacity(BYTES_PER_DATA_AREA),
+            boot_sector: vec![0; BYTES_PER_SECTOR],
+            fat_1: vec![0; BYTES_PER_FAT],
+            fat_2: vec![0; BYTES_PER_FAT],
+            root_dir: vec![0; BYTES_PER_ROOT],
+            data_area: vec![0; BYTES_PER_DATA_AREA],
         }
     }
 

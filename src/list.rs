@@ -12,8 +12,6 @@ pub fn list_files(args: &[String])
     let image_fn = args[0].clone();
     let image = fat::Image::from(image_fn)?;
 
-    println!("{:?}", image);
-
     for entry in image.root_entries() {
         if entry.rest_are_free() {
             break;
@@ -21,7 +19,11 @@ pub fn list_files(args: &[String])
             continue;
         }
 
-        println!("{}", entry.filename_full());
+        println!(
+            "{} {}",
+            entry.filename_full(),
+            entry.file_size,
+        );
     }
 
     Ok(())
