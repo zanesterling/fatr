@@ -1,0 +1,6 @@
+[package]
+name = "fatr"
+version = "0.1.0"
+authors = ["Zane Sterling <sterling.zane@gmail.com>"]
+
+[dependencies]
