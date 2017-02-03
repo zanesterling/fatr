@@ -19,6 +19,13 @@ macro_rules! errorf {
 
 
 type Command = fn (&[String]) -> Result<(), Box<error::Error>>;
+const COMMANDS: &'static [
+    (&'static str, &'static str, &'static str, Command)
+] = &[
+    ("add", "<file> <image>", "Adds file to image.",   add::add_file),
+    ("ls",  "<image>", "List files on image.",         list::list_files),
+    ("detail",  "<image> <file>", "Show file details", detail::detail_file),
+];
 fn get_commands() -> HashMap<&'static str, Command> {
     let mut map = HashMap::new();
     map.insert("add",    add::add_file as Command);
@@ -53,8 +60,9 @@ fn main() {
 
 fn usage(name: String) {
     println!("{}:", name);
-    println!("\tadd <file> <image>: Adds file to image.");
-    println!("\tls <image> [flags]: list files on image.");
+    for &(name, usage, description, _) in COMMANDS {
+        println!("\t{} {}: {}", name, usage, description);
+    }
 }
 
 fn error(err: Box<error::Error>) {
