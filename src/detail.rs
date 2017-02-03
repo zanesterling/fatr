@@ -16,8 +16,9 @@ pub fn detail_file(args: &[String])
     println!("{:#?}", file_metadata);
 
     let mut cluster_num = file_metadata.first_logical_cluster;
+    const CLUSTER_NUMS_PER_LINE: usize = 8;
     'outer: loop {
-        for _ in 0 .. 4 {
+        for _ in 0 .. CLUSTER_NUMS_PER_LINE {
             let next_cluster = image.get_fat_entry(cluster_num);
             print!("{:#x}\t", cluster_num);
 
