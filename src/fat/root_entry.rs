@@ -1,3 +1,6 @@
+use std::error;
+
+#[derive(Debug)]
 pub struct RootEntry {
     pub filename:  [u8; 8],
     pub extension: [u8; 3],
@@ -13,17 +16,19 @@ pub struct RootEntry {
     pub file_size: u32, // in bytes
 }
 
-enum RootEntryAttr {
-    ReadOnly,
-    Hidden,
-    System,
-    VolumeLabel,
-    Subdir,
-    Archive,
-}
-
 #[allow(dead_code)]
 impl RootEntry {
+    pub fn filename(&self) -> Result<String, Box<error::Error>> {
+        let mut name = self.filename.to_vec();
+        name.push('.' as u8);
+        name.extend(self.extension.iter());
+
+        match String::from_utf8(name) {
+            Ok(s) => Ok(s),
+            Err(err) => Err(From::from(err)),
+        }
+    }
+
     pub fn is_read_only(&self)    -> bool {
         self.attrs & 0x01 == 0x01
     }

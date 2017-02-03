@@ -19,8 +19,6 @@ const BYTES_PER_DATA_AREA: usize
     = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
 
 const BYTES_PER_ROOT_ENTRY: usize = 32;
-const MAX_ROOTDIR_ENTRIES: usize =
-    BYTES_PER_SECTOR * SECTORS_PER_ROOT / BYTES_PER_ROOT_ENTRY;
 #[test]
 fn test_root_entry_size() {
     assert_eq!(
@@ -88,19 +86,31 @@ impl Image {
         Ok(())
     }
 
+    // TODO: Make this an iterator
     pub fn root_entries(&self) -> Vec<RootEntry> {
-        let mut entries = Vec::new();
+        self.root_dir
+            .chunks(BYTES_PER_ROOT_ENTRY)
+            .map(|chunk| {
+                let mut entry_bytes = [0; BYTES_PER_ROOT_ENTRY];
+                entry_bytes.clone_from_slice(chunk);
 
-        let chunks = self.root_dir.chunks(BYTES_PER_ROOT_ENTRY);
-        for entry_slice in chunks {
-            let mut entry_bytes = [0; BYTES_PER_ROOT_ENTRY];
-            entry_bytes.clone_from_slice(entry_slice);
+                let entry: RootEntry;
+                unsafe { entry = mem::transmute(entry_bytes); }
+                entry
+            })
+            .collect::<Vec<RootEntry>>()
+    }
 
-            let entry: RootEntry;
-            unsafe { entry = mem::transmute(entry_bytes); }
-            entries.push(entry);
+    pub fn get_file_entry(&self, filename: String)
+        -> Result<RootEntry, Box<error::Error>>
+    {
+        for entry in self.root_entries() {
+            let entry_name = entry.filename();
+            if entry_name.is_ok() && entry_name.unwrap() == filename {
+                return Ok(entry);
+            }
         }
 
-        entries
+        Err(From::from(format!("file {} not found", filename)))
     }
 }
