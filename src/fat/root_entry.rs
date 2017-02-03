@@ -19,7 +19,11 @@ pub struct RootEntry {
 #[allow(dead_code)]
 impl RootEntry {
     pub fn filename(&self) -> Result<String, Box<error::Error>> {
-        let mut name = self.filename.to_vec();
+        let mut my_fn = self.filename.to_vec();
+        let mut name = my_fn
+            .drain(..)
+            .take_while(|&c| c != ' ' as u8)
+            .collect::<Vec<u8>>();
         name.push('.' as u8);
         name.extend(self.extension.iter());
 
