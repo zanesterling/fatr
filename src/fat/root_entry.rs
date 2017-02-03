@@ -1,11 +1,12 @@
 use std::error;
+use std::fmt;
+use std::fmt::Debug;
 
-#[derive(Debug)]
 pub struct RootEntry {
     pub filename:  [u8; 8],
     pub extension: [u8; 3],
     attrs: u8,
-    pub reserved: u16,
+    reserved: u16,
     pub creation_time: u16,
     pub creation_date: u16,
     pub last_access_date: u16,
@@ -77,5 +78,24 @@ impl RootEntry {
         } else {
             "BAD FILENAME".to_string()
         }
+    }
+}
+
+impl Debug for RootEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("RootEntry")
+            .field(
+                "filename",
+                &self.filename().unwrap_or("bad filename".to_string())
+            )
+            .field("attrs",                 &self.attrs)
+            .field("creation_time",         &self.creation_time)
+            .field("creation_date",         &self.creation_date)
+            .field("last_access_date",      &self.last_access_date)
+            .field("last_write_time",       &self.last_write_time)
+            .field("last_write_date",       &self.last_write_date)
+            .field("first_logical_cluster", &self.first_logical_cluster)
+            .field("file_size",             &format!("{:#x}", self.file_size))
+            .finish()
     }
 }
