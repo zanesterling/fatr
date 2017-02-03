@@ -98,6 +98,8 @@ impl Image {
                 unsafe { entry = mem::transmute(entry_bytes); }
                 entry
             })
+            .filter(|entry| { entry.filename[0] != 0xe5 })
+            .take_while(|entry| { entry.filename[0] != 0 })
             .collect::<Vec<RootEntry>>()
     }
 
