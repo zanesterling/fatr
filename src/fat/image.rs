@@ -111,9 +111,7 @@ impl Image {
             let entry_name: String;
             match entry.filename() {
                 Ok(name) => entry_name = name,
-                Err(err) => {
-                    continue;
-                },
+                Err(_) => continue,
             }
 
             if entry_name.to_lowercase() == filename.to_lowercase() {
@@ -122,5 +120,14 @@ impl Image {
         }
 
         Err(From::from(format!("file {} not found", filename)))
+    }
+
+    pub fn get_fat_entry(&self, cluster_num: u16) -> u16 {
+        let offset: usize = cluster_num as usize * 3 / 2;
+        let byte_1: u16 = self.fat_1[offset] as u16;
+        let byte_2: u16 = self.fat_1[offset + 1] as u16;
+
+        if cluster_num % 2 == 0 { byte_1 | ((byte_2 & 0x0f) << 8) }
+        else                    { (byte_1 >> 4) | (byte_2 << 4) }
     }
 }
