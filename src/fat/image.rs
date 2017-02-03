@@ -106,9 +106,17 @@ impl Image {
     pub fn get_file_entry(&self, filename: String)
         -> Result<RootEntry, Box<error::Error>>
     {
-        for entry in self.root_entries() {
-            let entry_name = entry.filename();
-            if entry_name.is_ok() && entry_name.unwrap() == filename {
+        let entries = self.root_entries();
+        for entry in entries {
+            let entry_name: String;
+            match entry.filename() {
+                Ok(name) => entry_name = name,
+                Err(err) => {
+                    continue;
+                },
+            }
+
+            if entry_name.to_lowercase() == filename.to_lowercase() {
                 return Ok(entry);
             }
         }

@@ -13,7 +13,7 @@ pub fn detail_file(args: &[String])
     let image = fat::Image::from(image_fn)?;
 
     let file_metadata = image.get_file_entry(args[1].clone())?;
-    println!("{:?}", file_metadata);
+    println!("{:#?}", file_metadata);
 
     Ok(())
 }
