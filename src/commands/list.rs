@@ -5,9 +5,7 @@ use fat;
 pub fn list_files(args: &[String])
     -> Result<(), Box<error::Error>>
 {
-    if args.len() < 1 {
-        return Err(From::from("expected image filename"));
-    }
+    expect_args!(args, 1);
 
     let image_fn = args[0].clone();
     let image = fat::Image::from(image_fn)?;

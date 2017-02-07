@@ -5,9 +5,7 @@ use fat;
 pub fn detail_file(args: &[String])
     -> Result<(), Box<error::Error>>
 {
-    if args.len() < 2 {
-        return Err(From::from("expected <file> <image> filename"));
-    }
+    expect_args!(args, 2);
 
     let image_fn = args[0].clone();
     let image = fat::Image::from(image_fn)?;

@@ -6,3 +6,14 @@ macro_rules! errorf {
         ));
     }
 }
+
+macro_rules! expect_args {
+    ( $args:expr, $num_args:expr ) => {
+        if $args.len() < $num_args {
+            return Err(errorf!(
+                "expected {} args, got {}",
+                $num_args, $args.len()
+            ))
+        }
+    }
+}
