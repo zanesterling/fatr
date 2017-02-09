@@ -2,7 +2,6 @@ use std::error;
 use std::fs;
 use std::io::Read;
 
-use itertools;
 use itertools::Itertools;
 
 use fat;
@@ -34,8 +33,7 @@ pub fn add_file(args: &[String])
     let (entry, index) = image.create_file_entry(fat_file_name)?;
 
     // Get free FAT entries, fill sectors with file data.
-    let mut file_bytes = file.bytes();
-    for chunk in &file_bytes.chunks(fat::BYTES_PER_SECTOR) {
+    for chunk in &file.bytes().chunks(fat::BYTES_PER_SECTOR) {
         let chunk = chunk
             .map(|b_res| b_res.unwrap_or(0))
             .collect::<Vec<_>>();
@@ -51,7 +49,7 @@ pub fn add_file(args: &[String])
         }
 
         // Write chunk.
-        image.write_data_sector(entry_index, &chunk);
+        try!(image.write_data_sector(entry_index, &chunk));
     }
 
     image.save_file_entry(entry, index)?;

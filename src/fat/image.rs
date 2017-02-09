@@ -187,11 +187,11 @@ impl Image {
     pub fn write_data_sector(&mut self, sector: usize, data: &[u8])
         -> Result<(), Box<error::Error>>
     {
+        let sector = sector - 2;
         if sector >= SECTORS_PER_DATA_AREA {
             return Err(errorf!("sector {} too high to write to", sector));
         }
 
-        let start_index = BYTES_PER_SECTOR * sector;
         let mut target_slice = &mut self.data_area[
             BYTES_PER_SECTOR * sector ..
             BYTES_PER_SECTOR * (sector + 1)
