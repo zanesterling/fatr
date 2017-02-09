@@ -7,7 +7,7 @@ use std::mem;
 
 use fat::RootEntry;
 
-const BYTES_PER_SECTOR: usize = 512;
+pub const BYTES_PER_SECTOR: usize = 512;
 const SECTORS_PER_FAT: usize = 9;
 const SECTORS_PER_ROOT: usize = 14;
 const SECTORS_PER_DATA_AREA: usize = 2847;
@@ -21,10 +21,7 @@ const BYTES_PER_DATA_AREA: usize
 const BYTES_PER_ROOT_ENTRY: usize = 32;
 #[test]
 fn test_root_entry_size() {
-    assert_eq!(
-        mem::size_of::<RootEntry>(),
-        BYTES_PER_ROOT_ENTRY
-    );
+    assert_eq!(mem::size_of::<RootEntry>(), BYTES_PER_ROOT_ENTRY);
 }
 
 #[derive(Debug)]
@@ -122,6 +119,53 @@ impl Image {
         Err(From::from(format!("file {} not found", filename)))
     }
 
+    pub fn create_file_entry(&self, filename: String)
+        -> Result<(RootEntry, u16), Box<error::Error>>
+    {
+        for (index, e) in self.root_entries().iter().enumerate() {
+            if !e.is_free() { continue; }
+
+            let mut entry = RootEntry::new();
+            try!(entry.set_filename(filename));
+            return Ok((entry.clone(), index as u16));
+        }
+
+        Err(From::from("no free entries"))
+    }
+
+    pub fn save_file_entry(&mut self, entry: RootEntry, index: u16)
+        -> Result<(), Box<error::Error>>
+    {
+        let entry_bytes: [u8; BYTES_PER_ROOT_ENTRY];
+        unsafe { entry_bytes = mem::transmute(entry); }
+
+        self.root_dir[
+            index as usize * BYTES_PER_ROOT_ENTRY ..
+            (index as usize + 1) * BYTES_PER_ROOT_ENTRY
+        ].clone_from_slice(&entry_bytes[..]);
+        Ok(())
+    }
+
+    pub fn fat_entries<'a>(&'a self) -> Box<Iterator<Item=u16> + 'a> {
+        Box::new(
+            self.fat_1
+            .windows(2)
+            .enumerate()
+            .filter_map(|(i, w)|
+                if i % 3 == 2 {
+                    None
+                } else {
+                    let val = if i % 3 == 0 {
+                        ((w[1] as u16 & 0xf) << 8) | w[0] as u16
+                    } else {
+                        (w[1] as u16 & 0xf0) | ((w[1] as u16) << 4)
+                    };
+                    Some(val)
+                }
+            )
+        )
+    }
+
     pub fn get_fat_entry(&self, cluster_num: u16) -> u16 {
         let offset: usize = cluster_num as usize * 3 / 2;
         let byte_1: u16 = self.fat_1[offset] as u16;
@@ -129,5 +173,11 @@ impl Image {
 
         if cluster_num % 2 == 0 { byte_1 | ((byte_2 & 0x0f) << 8) }
         else                    { (byte_1 >> 4) | (byte_2 << 4) }
+    }
+
+    pub fn get_free_fat_entry(&self) -> Option<u16> {
+        self.fat_entries()
+            .filter(|&e| e == 0)
+            .nth(0)
     }
 }

@@ -1,6 +1,7 @@
 mod image;
 mod root_entry;
 
+pub use self::image::BYTES_PER_SECTOR;
 pub use self::image::Image;
 pub use self::root_entry::RootEntry;
 
