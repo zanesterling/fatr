@@ -21,13 +21,14 @@ fn main() {
 
     // check for command
     let args: Vec<String> = arg_iter.collect();
-    match commands::get_command(&command) {
-        Some(cmd_func) =>
-            if let Err(e) = cmd_func(&args) {
-                error(e);
-            },
+    let cmd_func_opt = commands::get_command(&command);
+    if let None = cmd_func_opt {
+        error(errorf!("command \"{}\" not recognized", command));
+    }
 
-        None => error(errorf!("command \"{}\" not recognized", command)),
+    let cmd_func = cmd_func_opt.unwrap();
+    if let Err(e) = cmd_func(&args) {
+        error(e);
     }
 }
 
