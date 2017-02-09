@@ -146,7 +146,9 @@ impl Image {
         Ok(())
     }
 
-    pub fn fat_entries<'a>(&'a self) -> Box<Iterator<Item=u16> + 'a> {
+    pub fn fat_entries<'a>(&'a self)
+        -> Box<Iterator<Item=(usize, u16)> + 'a>
+    {
         Box::new(
             self.fat_1
             .windows(2)
@@ -160,7 +162,7 @@ impl Image {
                     } else {
                         (w[1] as u16 & 0xf0) | ((w[1] as u16) << 4)
                     };
-                    Some(val)
+                    Some((i, val))
                 }
             )
         )
@@ -175,9 +177,27 @@ impl Image {
         else                    { (byte_1 >> 4) | (byte_2 << 4) }
     }
 
-    pub fn get_free_fat_entry(&self) -> Option<u16> {
+    pub fn get_free_fat_entry(&self) -> Option<usize> {
         self.fat_entries()
-            .filter(|&e| e == 0)
+            .filter(|&(_, e)| e == 0)
+            .map(|(i, _)| i + 2)
             .nth(0)
+    }
+
+    pub fn write_data_sector(&mut self, sector: usize, data: &[u8])
+        -> Result<(), Box<error::Error>>
+    {
+        if sector >= SECTORS_PER_DATA_AREA {
+            return Err(errorf!("sector {} too high to write to", sector));
+        }
+
+        let start_index = BYTES_PER_SECTOR * sector;
+        let mut target_slice = &mut self.data_area[
+            BYTES_PER_SECTOR * sector ..
+            BYTES_PER_SECTOR * (sector + 1)
+        ];
+
+        target_slice.copy_from_slice(data);
+        Ok(())
     }
 }
