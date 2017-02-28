@@ -34,16 +34,6 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new() -> Image {
-        Image {
-            boot_sector: vec![0; 1 * BYTES_PER_SECTOR],
-            fat_1: vec![0; BYTES_PER_FAT],
-            fat_2: vec![0; BYTES_PER_FAT],
-            root_dir: vec![0; BYTES_PER_ROOT],
-            data_area: vec![0; BYTES_PER_DATA_AREA],
-        }
-    }
-
     fn blank_image() -> Image {
         Image {
             boot_sector: vec![0; BYTES_PER_SECTOR],
