@@ -1,12 +1,10 @@
 # fatr
 A tool for parsing and manipulating FAT12 images.
 
-## Build
 ```shell
-cargo build
-```
+# To build:
+$ cargo build
 
-## Run
-```shell
-cargo run
+# To run:
+$ cargo run
 ```
