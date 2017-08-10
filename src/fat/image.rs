@@ -179,7 +179,7 @@ impl Image {
     {
         let sector = sector - 2;
         if sector >= SECTORS_PER_DATA_AREA {
-            return Err(errorf!("sector {} too high to write to", sector));
+            return Err(From::from(format!("sector {} too high to write to", sector)))
         }
 
         let mut target_slice = &mut self.data_area[
