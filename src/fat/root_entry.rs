@@ -57,7 +57,7 @@ impl RootEntry {
     {
         let parts: Vec<_> = filename.split('.').collect();
         if parts.len() != 2 {
-            return Err(errorf!("bad filename: \"{}\"", filename));
+            return Err(From::from(format!("bad filename: \"{}\"", filename)));
         }
         self.filename.clone_from_slice(parts[0].to_uppercase().as_bytes());
         self.extension.clone_from_slice(parts[1].to_uppercase().as_bytes());
