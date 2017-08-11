@@ -1,11 +1,11 @@
 use std::error;
 use std::fs;
 use std::io;
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read,Write};
 use std::mem;
 
 use fat::RootEntry;
+use fat::BIOSParam;
 
 pub const BYTES_PER_SECTOR: usize = 512;
 const SECTORS_PER_FAT: usize = 9;
@@ -19,6 +19,7 @@ const BYTES_PER_DATA_AREA: usize
     = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
 
 const BYTES_PER_ROOT_ENTRY: usize = 32;
+
 #[test]
 fn test_root_entry_size() {
     assert_eq!(mem::size_of::<RootEntry>(), BYTES_PER_ROOT_ENTRY);
@@ -72,6 +73,19 @@ impl Image {
 
         Ok(())
     }
+
+    pub fn bios_parameter(&self) -> BIOSParam {
+        let params: BIOSParam;
+        let mut bios_bytes: [u8; 13] = [0; 13];
+        bios_bytes.clone_from_slice(&self.boot_sector[11..24]);
+        params = unsafe {
+            let mut param = ::std::mem::zeroed();
+            let p = &mut param as *mut BIOSParam as *mut [u8; 13];
+            ::std::ptr::write(p, bios_bytes);
+            param
+        };
+        return params;
+	}
 
     // TODO: Make this an iterator
     pub fn root_entries(&self) -> Vec<RootEntry> {
