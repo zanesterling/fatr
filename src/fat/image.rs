@@ -34,7 +34,10 @@ pub struct Image {
     data_area: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl Image {
+
+    /// Create a new blank FAT Image.
     fn blank_image() -> Image {
         Image {
             boot_sector: vec![0; BYTES_PER_SECTOR],
@@ -45,6 +48,7 @@ impl Image {
         }
     }
 
+    /// Create a new FAT Image from the specified file.
     pub fn from(image_fn: String)
         -> Result<Image, Box<error::Error>>
     {
@@ -60,6 +64,7 @@ impl Image {
         Ok(image)
     }
 
+    /// Save the FAT filesystem image to the specified file.
     pub fn save(&self, image_fn: String)
         -> Result<(), io::Error>
     {
@@ -74,6 +79,7 @@ impl Image {
         Ok(())
     }
 
+    /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem.
     pub fn bios_parameter(&self) -> BIOSParam {
         let params: BIOSParam;
         let mut bios_bytes: [u8; 13] = [0; 13];
@@ -85,7 +91,7 @@ impl Image {
             param
         };
         return params;
-	}
+    }
 
     // TODO: Make this an iterator
     pub fn root_entries(&self) -> Vec<RootEntry> {
@@ -104,6 +110,7 @@ impl Image {
             .collect::<Vec<RootEntry>>()
     }
 
+    /// Get the RootEntry for the specified file within the Image.
     pub fn get_file_entry(&self, filename: String)
         -> Result<RootEntry, Box<error::Error>>
     {
@@ -123,6 +130,7 @@ impl Image {
         Err(From::from(format!("file {} not found", filename)))
     }
 
+    /// Create a new RootEntry within the Image with the specified filename.
     pub fn create_file_entry(&self, filename: String)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
