@@ -1,3 +1,5 @@
+extern crate byteorder;
+
 use std::error;
 use std::fs;
 use std::io;
@@ -6,6 +8,8 @@ use std::mem;
 
 use fat::RootEntry;
 use fat::BIOSParam;
+
+use self::byteorder::{LittleEndian,ByteOrder};
 
 pub const BYTES_PER_SECTOR: usize = 512;
 const SECTORS_PER_FAT: usize = 9;
@@ -81,15 +85,23 @@ impl Image {
 
     /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem.
     pub fn bios_parameter(&self) -> BIOSParam {
-        let params: BIOSParam;
-        let mut bios_bytes: [u8; 13] = [0; 13];
-        bios_bytes.clone_from_slice(&self.boot_sector[11..24]);
-        params = unsafe {
-            let mut param = ::std::mem::zeroed();
-            let p = &mut param as *mut BIOSParam as *mut [u8; 13];
-            ::std::ptr::write(p, bios_bytes);
-            param
-        };
+        let mut params = BIOSParam::new();
+        params.bytes_per_sector = LittleEndian::read_u16(&self.boot_sector[11..13]);
+        params.sectors_per_cluster = self.boot_sector[13];
+        params.reserved_sectors = LittleEndian::read_u16(&self.boot_sector[14..16]);
+        params.fat_count = self.boot_sector[16];
+        params.max_roots = LittleEndian::read_u16(&self.boot_sector[17..19]);
+        params.sectors = LittleEndian::read_u16(&self.boot_sector[19..21]) as u32;
+        if params.sectors == 0 {
+            // 4 byte sector count at 0x020
+            params.sectors = LittleEndian::read_u32(&self.boot_sector[32..37]);
+        }
+        params.media_id = self.boot_sector[21];
+        params.sectors_per_fat = LittleEndian::read_u16(&self.boot_sector[22..24]) as u32;
+        if params.sectors_per_fat == 0 {
+            // 4 byte sectors per fat count at 0x024
+            params.sectors_per_fat = LittleEndian::read_u32(&self.boot_sector[36..41]);
+        }
         return params;
     }
 

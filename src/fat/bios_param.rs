@@ -1,6 +1,6 @@
 
 #[derive(Clone,Debug)]
-#[repr(C)]
+
 /// BIOS parameter block describes the FAT filesystem.
 pub struct BIOSParam {
     pub bytes_per_sector: u16,
@@ -8,9 +8,9 @@ pub struct BIOSParam {
     pub reserved_sectors: u16,
     pub fat_count: u8,
     pub max_roots: u16,
-    pub sectors: u16,
+    pub sectors: u32,
     pub media_id: u8,
-    pub sectors_per_fat: u16,
+    pub sectors_per_fat: u32,
 }
 
 #[test]
