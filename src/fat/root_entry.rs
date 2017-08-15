@@ -3,6 +3,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 #[derive(Clone)]
+#[repr(C)]
 pub struct RootEntry {
     pub filename:  [u8; 8],
     pub extension: [u8; 3],

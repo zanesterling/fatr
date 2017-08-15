@@ -1,11 +1,15 @@
+extern crate byteorder;
+
 use std::error;
 use std::fs;
 use std::io;
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read,Write};
 use std::mem;
 
 use fat::RootEntry;
+use fat::BIOSParam;
+
+use self::byteorder::{LittleEndian,ByteOrder};
 
 pub const BYTES_PER_SECTOR: usize = 512;
 const SECTORS_PER_FAT: usize = 9;
@@ -19,6 +23,7 @@ const BYTES_PER_DATA_AREA: usize
     = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
 
 const BYTES_PER_ROOT_ENTRY: usize = 32;
+
 #[test]
 fn test_root_entry_size() {
     assert_eq!(mem::size_of::<RootEntry>(), BYTES_PER_ROOT_ENTRY);
@@ -33,7 +38,10 @@ pub struct Image {
     data_area: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl Image {
+
+    /// Create a new blank FAT Image.
     fn blank_image() -> Image {
         Image {
             boot_sector: vec![0; BYTES_PER_SECTOR],
@@ -44,6 +52,7 @@ impl Image {
         }
     }
 
+    /// Create a new FAT Image from the specified file.
     pub fn from(image_fn: String)
         -> Result<Image, Box<error::Error>>
     {
@@ -59,6 +68,7 @@ impl Image {
         Ok(image)
     }
 
+    /// Save the FAT filesystem image to the specified file.
     pub fn save(&self, image_fn: String)
         -> Result<(), io::Error>
     {
@@ -71,6 +81,28 @@ impl Image {
         try!(file.write_all(&self.data_area));
 
         Ok(())
+    }
+
+    /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem.
+    pub fn bios_parameter(&self) -> BIOSParam {
+        let mut params = BIOSParam::new();
+        params.bytes_per_sector = LittleEndian::read_u16(&self.boot_sector[11..13]);
+        params.sectors_per_cluster = self.boot_sector[13];
+        params.reserved_sectors = LittleEndian::read_u16(&self.boot_sector[14..16]);
+        params.fat_count = self.boot_sector[16];
+        params.max_roots = LittleEndian::read_u16(&self.boot_sector[17..19]);
+        params.sectors = LittleEndian::read_u16(&self.boot_sector[19..21]) as u32;
+        if params.sectors == 0 {
+            // 4 byte sector count at 0x020
+            params.sectors = LittleEndian::read_u32(&self.boot_sector[32..37]);
+        }
+        params.media_id = self.boot_sector[21];
+        params.sectors_per_fat = LittleEndian::read_u16(&self.boot_sector[22..24]) as u32;
+        if params.sectors_per_fat == 0 {
+            // 4 byte sectors per fat count at 0x024
+            params.sectors_per_fat = LittleEndian::read_u32(&self.boot_sector[36..41]);
+        }
+        return params;
     }
 
     // TODO: Make this an iterator
@@ -90,6 +122,7 @@ impl Image {
             .collect::<Vec<RootEntry>>()
     }
 
+    /// Get the RootEntry for the specified file within the Image.
     pub fn get_file_entry(&self, filename: String)
         -> Result<RootEntry, Box<error::Error>>
     {
@@ -109,6 +142,7 @@ impl Image {
         Err(From::from(format!("file {} not found", filename)))
     }
 
+    /// Create a new RootEntry within the Image with the specified filename.
     pub fn create_file_entry(&self, filename: String)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
