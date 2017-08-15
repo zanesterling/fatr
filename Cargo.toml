@@ -1,7 +1,7 @@
 [package]
 name = "fatr"
 version = "0.2.0"
-authors = ["Zane Sterling <sterling.zane@gmail.com>"]
+authors = ["Zane Sterling <sterling.zane@gmail.com>", "Alex Von Gluck IV <kallisti5@unixzen.com>"]
 description = "A tool for parsing and manipulating FAT12 images."
 license = "MIT"
 
