@@ -33,12 +33,13 @@ pub struct Image {
 impl Image {
     /// Create a new blank FAT Image from a defined BPB
     fn new(bpb: BIOSParam) -> Image {
+        let boot_sector_size = bpb.bytes_per_sector as usize * bpb.reserved_sectors as usize;
         let bytes_per_fat = (bpb.sectors_per_fat * bpb.bytes_per_sector as u32) as usize;
         let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
         let data_offset = bpb.bytes_per_sector as usize + (bytes_per_fat as usize * 2) + bytes_per_root as usize;
         let bytes_per_data_area = bpb.len() - data_offset;
         Image {
-            boot_sector: vec![0; bpb.bytes_per_sector as usize],
+            boot_sector: vec![0; boot_sector_size],
             fat_1: vec![0; bytes_per_fat],
             fat_2: vec![0; bytes_per_fat],
             root_dir: vec![0; bytes_per_root],
