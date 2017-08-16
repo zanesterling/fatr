@@ -1,5 +1,3 @@
-extern crate byteorder;
-
 use std::error;
 use std::fs;
 use std::io;
@@ -9,19 +7,11 @@ use std::mem;
 use fat::RootEntry;
 use fat::BIOSParam;
 
-use self::byteorder::{LittleEndian,ByteOrder};
-
-pub const BYTES_PER_SECTOR: usize = 512;
-const SECTORS_PER_FAT: usize = 9;
-const SECTORS_PER_ROOT: usize = 14;
+// TODO: Kill me
 const SECTORS_PER_DATA_AREA: usize = 2847;
 
-const BYTES_PER_FAT: usize = BYTES_PER_SECTOR * SECTORS_PER_FAT;
-const BYTES_PER_ROOT: usize
-    = BYTES_PER_SECTOR * SECTORS_PER_ROOT;
-const BYTES_PER_DATA_AREA: usize
-    = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
-
+// Always the same
+const SECTORS_PER_ROOT: usize = 14;
 const BYTES_PER_ROOT_ENTRY: usize = 32;
 
 #[test]
@@ -36,19 +26,24 @@ pub struct Image {
     fat_2: Vec<u8>,
     root_dir: Vec<u8>,
     data_area: Vec<u8>,
+    bpb_data: BIOSParam,
 }
 
 #[allow(dead_code)]
 impl Image {
-
-    /// Create a new blank FAT Image.
-    fn blank_image() -> Image {
+    /// Create a new blank FAT Image from a defined BPB
+    fn new(bpb: BIOSParam) -> Image {
+        let bytes_per_fat = (bpb.sectors_per_fat * bpb.bytes_per_sector as u32) as usize;
+        let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
+        let data_offset = bpb.bytes_per_sector as usize + (bytes_per_fat as usize * 2) + bytes_per_root as usize;
+        let bytes_per_data_area = bpb.len() - data_offset;
         Image {
-            boot_sector: vec![0; BYTES_PER_SECTOR],
-            fat_1: vec![0; BYTES_PER_FAT],
-            fat_2: vec![0; BYTES_PER_FAT],
-            root_dir: vec![0; BYTES_PER_ROOT],
-            data_area: vec![0; BYTES_PER_DATA_AREA],
+            boot_sector: vec![0; bpb.bytes_per_sector as usize],
+            fat_1: vec![0; bytes_per_fat],
+            fat_2: vec![0; bytes_per_fat],
+            root_dir: vec![0; bytes_per_root],
+            data_area: vec![0; bytes_per_data_area],
+            bpb_data: bpb,
         }
     }
 
@@ -56,8 +51,9 @@ impl Image {
     pub fn from(image_fn: String)
         -> Result<Image, Box<error::Error>>
     {
+        let bpb = BIOSParam::from(image_fn.clone())?;
         let mut file = fs::File::open(image_fn)?;
-        let mut image = Image::blank_image();
+        let mut image = Image::new(bpb);
 
         try!(file.read_exact(&mut image.boot_sector));
         try!(file.read_exact(&mut image.fat_1));
@@ -85,24 +81,12 @@ impl Image {
 
     /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem.
     pub fn bios_parameter(&self) -> BIOSParam {
-        let mut params = BIOSParam::new();
-        params.bytes_per_sector = LittleEndian::read_u16(&self.boot_sector[11..13]);
-        params.sectors_per_cluster = self.boot_sector[13];
-        params.reserved_sectors = LittleEndian::read_u16(&self.boot_sector[14..16]);
-        params.fat_count = self.boot_sector[16];
-        params.max_roots = LittleEndian::read_u16(&self.boot_sector[17..19]);
-        params.sectors = LittleEndian::read_u16(&self.boot_sector[19..21]) as u32;
-        if params.sectors == 0 {
-            // 4 byte sector count at 0x020
-            params.sectors = LittleEndian::read_u32(&self.boot_sector[32..37]);
-        }
-        params.media_id = self.boot_sector[21];
-        params.sectors_per_fat = LittleEndian::read_u16(&self.boot_sector[22..24]) as u32;
-        if params.sectors_per_fat == 0 {
-            // 4 byte sectors per fat count at 0x024
-            params.sectors_per_fat = LittleEndian::read_u32(&self.boot_sector[36..41]);
-        }
-        return params;
+        self.bpb_data.clone()
+    }
+
+    /// FAT sector size in bytes.
+    pub fn sector_size(&self) -> usize {
+        self.bpb_data.bytes_per_sector as usize
     }
 
     // TODO: Make this an iterator
@@ -217,8 +201,8 @@ impl Image {
         }
 
         let mut target_slice = &mut self.data_area[
-            BYTES_PER_SECTOR * sector ..
-            BYTES_PER_SECTOR * (sector + 1)
+            self.bpb_data.bytes_per_sector as usize * sector ..
+            self.bpb_data.bytes_per_sector as usize * (sector + 1)
         ];
 
         target_slice.copy_from_slice(data);

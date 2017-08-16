@@ -2,7 +2,6 @@ mod image;
 mod root_entry;
 mod bios_param;
 
-pub use self::image::BYTES_PER_SECTOR;
 pub use self::image::Image;
 pub use self::root_entry::RootEntry;
 pub use self::bios_param::BIOSParam;
