@@ -7,9 +7,6 @@ use std::mem;
 use fat::RootEntry;
 use fat::BIOSParam;
 
-// TODO: Kill me
-const SECTORS_PER_DATA_AREA: usize = 2847;
-
 // Always the same
 const SECTORS_PER_ROOT: usize = 14;
 const BYTES_PER_ROOT_ENTRY: usize = 32;
@@ -32,12 +29,12 @@ pub struct Image {
 #[allow(dead_code)]
 impl Image {
     /// Create a new blank FAT Image from a defined BPB
-    fn new(bpb: BIOSParam) -> Image {
+    fn new(bpb: BIOSParam, length: usize) -> Image {
         let boot_sector_size = bpb.bytes_per_sector as usize * bpb.reserved_sectors as usize;
         let bytes_per_fat = (bpb.sectors_per_fat * bpb.bytes_per_sector as u32) as usize;
         let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
-        let data_offset = bpb.bytes_per_sector as usize + (bytes_per_fat as usize * 2) + bytes_per_root as usize;
-        let bytes_per_data_area = bpb.len() - data_offset;
+        let data_offset = boot_sector_size as usize + (bytes_per_fat * 2) as usize + bytes_per_root as usize;
+        let bytes_per_data_area = length - data_offset;
         Image {
             boot_sector: vec![0; boot_sector_size],
             fat_1: vec![0; bytes_per_fat],
@@ -52,9 +49,11 @@ impl Image {
     pub fn from(image_fn: String)
         -> Result<Image, Box<error::Error>>
     {
+        let metadata = fs::metadata(image_fn.clone())?;
         let bpb = BIOSParam::from(image_fn.clone())?;
+
         let mut file = fs::File::open(image_fn)?;
-        let mut image = Image::new(bpb);
+        let mut image = Image::new(bpb, metadata.len() as usize);
 
         try!(file.read_exact(&mut image.boot_sector));
         try!(file.read_exact(&mut image.fat_1));
@@ -197,7 +196,8 @@ impl Image {
         -> Result<(), Box<error::Error>>
     {
         let sector = sector - 2;
-        if sector >= SECTORS_PER_DATA_AREA {
+        let bytes = sector * self.bpb_data.bytes_per_sector as usize;
+        if bytes >= self.data_area.len() {
             return Err(From::from(format!("sector {} too high to write to", sector)))
         }
 
