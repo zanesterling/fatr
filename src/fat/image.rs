@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::io::{Read,Write};
 use std::mem;
+use std::path::Path;
 
 use fat::RootEntry;
 use fat::BIOSParam;
@@ -46,13 +47,13 @@ impl Image {
     }
 
     /// Create a new FAT Image from the specified file.
-    pub fn from(image_fn: String)
+    pub fn from_file<P: AsRef<Path>>(p: P)
         -> Result<Image, Box<error::Error>>
     {
-        let metadata = fs::metadata(image_fn.clone())?;
-        let bpb = BIOSParam::from(image_fn.clone())?;
+        let metadata = fs::metadata(p.as_ref())?;
+        let bpb = BIOSParam::from_file(p.as_ref())?;
 
-        let mut file = fs::File::open(image_fn)?;
+        let mut file = fs::File::open(p.as_ref())?;
         let mut image = Image::new(bpb, metadata.len() as usize);
 
         try!(file.read_exact(&mut image.boot_sector));

@@ -8,7 +8,7 @@ pub fn list_files(args: &[String])
     expect_args!(args, 1);
 
     let image_fn = args[0].clone();
-    let image = fat::Image::from(image_fn)?;
+    let image = fat::Image::from_file(image_fn)?;
 
     for entry in image.root_entries() {
         if entry.rest_are_free() {

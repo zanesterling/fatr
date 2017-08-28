@@ -19,7 +19,7 @@ pub fn add_file(args: &[String])
         file_name.clone()
     };
 
-    let mut image = fat::Image::from(image_name.clone())?;
+    let mut image = fat::Image::from_file(image_name.clone())?;
     let bpb = image.bios_parameter();
 
     // Don't overwrite a preexisting file.

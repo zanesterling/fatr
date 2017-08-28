@@ -8,7 +8,7 @@ pub fn detail_file(args: &[String])
     expect_args!(args, 2);
 
     let image_fn = args[0].clone();
-    let image = fat::Image::from(image_fn)?;
+    let image = fat::Image::from_file(image_fn)?;
 
     let file_metadata = image.get_file_entry(args[1].clone())?;
     println!("{:#?}", file_metadata);
