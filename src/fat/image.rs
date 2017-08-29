@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::io::{Read,Write};
 use std::mem;
+use std::str;
 use std::path::Path;
 
 use fat::RootEntry;
@@ -88,6 +89,20 @@ impl Image {
     /// FAT sector size in bytes.
     pub fn sector_size(&self) -> usize {
         self.bpb_data.bytes_per_sector as usize
+    }
+
+    pub fn volume_label(&self) -> Result<String, Box<error::Error>> {
+        let entries = self.root_entries();
+        for entry in entries {
+            if !entry.is_volume_label() {
+                continue;
+            }
+            let label = format!("{}{}",
+                str::from_utf8(&entry.filename)?,
+                str::from_utf8(&entry.extension)?);
+            return Ok(label);
+        }
+        return Ok("has no label".to_string());
     }
 
     // TODO: Make this an iterator
