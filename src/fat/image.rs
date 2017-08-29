@@ -1,27 +1,15 @@
-extern crate byteorder;
-
 use std::error;
 use std::fs;
 use std::io;
 use std::io::{Read,Write};
 use std::mem;
+use std::path::Path;
 
 use fat::RootEntry;
 use fat::BIOSParam;
 
-use self::byteorder::{LittleEndian,ByteOrder};
-
-pub const BYTES_PER_SECTOR: usize = 512;
-const SECTORS_PER_FAT: usize = 9;
+// Always the same
 const SECTORS_PER_ROOT: usize = 14;
-const SECTORS_PER_DATA_AREA: usize = 2847;
-
-const BYTES_PER_FAT: usize = BYTES_PER_SECTOR * SECTORS_PER_FAT;
-const BYTES_PER_ROOT: usize
-    = BYTES_PER_SECTOR * SECTORS_PER_ROOT;
-const BYTES_PER_DATA_AREA: usize
-    = BYTES_PER_SECTOR * SECTORS_PER_DATA_AREA;
-
 const BYTES_PER_ROOT_ENTRY: usize = 32;
 
 #[test]
@@ -36,28 +24,37 @@ pub struct Image {
     fat_2: Vec<u8>,
     root_dir: Vec<u8>,
     data_area: Vec<u8>,
+    bpb_data: BIOSParam,
 }
 
 #[allow(dead_code)]
 impl Image {
-
-    /// Create a new blank FAT Image.
-    fn blank_image() -> Image {
+    /// Create a new blank FAT Image from a defined BPB
+    fn new(bpb: BIOSParam, length: usize) -> Image {
+        let boot_sector_size = bpb.bytes_per_sector as usize * bpb.reserved_sectors as usize;
+        let bytes_per_fat = (bpb.sectors_per_fat * bpb.bytes_per_sector as u32) as usize;
+        let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
+        let data_offset = boot_sector_size as usize + (bytes_per_fat * 2) as usize + bytes_per_root as usize;
+        let bytes_per_data_area = length - data_offset;
         Image {
-            boot_sector: vec![0; BYTES_PER_SECTOR],
-            fat_1: vec![0; BYTES_PER_FAT],
-            fat_2: vec![0; BYTES_PER_FAT],
-            root_dir: vec![0; BYTES_PER_ROOT],
-            data_area: vec![0; BYTES_PER_DATA_AREA],
+            boot_sector: vec![0; boot_sector_size],
+            fat_1: vec![0; bytes_per_fat],
+            fat_2: vec![0; bytes_per_fat],
+            root_dir: vec![0; bytes_per_root],
+            data_area: vec![0; bytes_per_data_area],
+            bpb_data: bpb,
         }
     }
 
     /// Create a new FAT Image from the specified file.
-    pub fn from(image_fn: String)
+    pub fn from_file<P: AsRef<Path>>(p: P)
         -> Result<Image, Box<error::Error>>
     {
-        let mut file = fs::File::open(image_fn)?;
-        let mut image = Image::blank_image();
+        let metadata = fs::metadata(p.as_ref())?;
+        let bpb = BIOSParam::from_file(p.as_ref())?;
+
+        let mut file = fs::File::open(p.as_ref())?;
+        let mut image = Image::new(bpb, metadata.len() as usize);
 
         try!(file.read_exact(&mut image.boot_sector));
         try!(file.read_exact(&mut image.fat_1));
@@ -85,24 +82,12 @@ impl Image {
 
     /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem.
     pub fn bios_parameter(&self) -> BIOSParam {
-        let mut params = BIOSParam::new();
-        params.bytes_per_sector = LittleEndian::read_u16(&self.boot_sector[11..13]);
-        params.sectors_per_cluster = self.boot_sector[13];
-        params.reserved_sectors = LittleEndian::read_u16(&self.boot_sector[14..16]);
-        params.fat_count = self.boot_sector[16];
-        params.max_roots = LittleEndian::read_u16(&self.boot_sector[17..19]);
-        params.sectors = LittleEndian::read_u16(&self.boot_sector[19..21]) as u32;
-        if params.sectors == 0 {
-            // 4 byte sector count at 0x020
-            params.sectors = LittleEndian::read_u32(&self.boot_sector[32..37]);
-        }
-        params.media_id = self.boot_sector[21];
-        params.sectors_per_fat = LittleEndian::read_u16(&self.boot_sector[22..24]) as u32;
-        if params.sectors_per_fat == 0 {
-            // 4 byte sectors per fat count at 0x024
-            params.sectors_per_fat = LittleEndian::read_u32(&self.boot_sector[36..41]);
-        }
-        return params;
+        self.bpb_data.clone()
+    }
+
+    /// FAT sector size in bytes.
+    pub fn sector_size(&self) -> usize {
+        self.bpb_data.bytes_per_sector as usize
     }
 
     // TODO: Make this an iterator
@@ -212,13 +197,14 @@ impl Image {
         -> Result<(), Box<error::Error>>
     {
         let sector = sector - 2;
-        if sector >= SECTORS_PER_DATA_AREA {
+        let bytes = sector * self.bpb_data.bytes_per_sector as usize;
+        if bytes >= self.data_area.len() {
             return Err(From::from(format!("sector {} too high to write to", sector)))
         }
 
         let mut target_slice = &mut self.data_area[
-            BYTES_PER_SECTOR * sector ..
-            BYTES_PER_SECTOR * (sector + 1)
+            self.bpb_data.bytes_per_sector as usize * sector ..
+            self.bpb_data.bytes_per_sector as usize * (sector + 1)
         ];
 
         target_slice.copy_from_slice(data);

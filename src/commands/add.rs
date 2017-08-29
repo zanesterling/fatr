@@ -19,7 +19,7 @@ pub fn add_file(args: &[String])
         file_name.clone()
     };
 
-    let mut image = fat::Image::from(image_name.clone())?;
+    let mut image = fat::Image::from_file(image_name.clone())?;
 
     // Don't overwrite a preexisting file.
     if let Ok(_) = image.get_file_entry(file_name.clone()) {
@@ -33,7 +33,7 @@ pub fn add_file(args: &[String])
     let (entry, index) = image.create_file_entry(fat_file_name)?;
 
     // Get free FAT entries, fill sectors with file data.
-    for chunk in &file.bytes().chunks(fat::BYTES_PER_SECTOR) {
+    for chunk in &file.bytes().chunks(image.sector_size()) {
         let chunk = chunk
             .map(|b_res| b_res.unwrap_or(0))
             .collect::<Vec<_>>();
