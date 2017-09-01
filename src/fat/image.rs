@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::io::{Read,Write};
 use std::mem;
+use std::str;
 use std::path::Path;
 
 use fat::RootEntry;
@@ -90,7 +91,39 @@ impl Image {
         self.bpb_data.bytes_per_sector as usize
     }
 
-    // TODO: Make this an iterator
+    /// FAT volume label
+    pub fn volume_label(&self) -> Result<String, Box<error::Error>> {
+        let entries = self.root_entries();
+        for entry in entries {
+            if !entry.is_volume_label() {
+                continue;
+            }
+            let label = format!("{}{}",
+                str::from_utf8(&entry.filename)?,
+                str::from_utf8(&entry.extension)?);
+            return Ok(label);
+        }
+        return Ok("has no label".to_string());
+    }
+
+    // TODO: Make iterator once "impl Trait" is stable.
+    /// Return all FAT root entries (including unused)
+    pub fn root_entries_all(&self) -> Vec<RootEntry> {
+        self.root_dir
+            .chunks(BYTES_PER_ROOT_ENTRY)
+            .map(|chunk| {
+                let mut entry_bytes = [0; BYTES_PER_ROOT_ENTRY];
+                entry_bytes.clone_from_slice(chunk);
+
+                let entry: RootEntry;
+                unsafe { entry = mem::transmute(entry_bytes); }
+                entry
+            })
+            .collect::<Vec<RootEntry>>()
+    }
+
+    // TODO: Make iterator once "impl Trait" is stable.
+    /// Return used FAT root entries
     pub fn root_entries(&self) -> Vec<RootEntry> {
         self.root_dir
             .chunks(BYTES_PER_ROOT_ENTRY)
@@ -131,7 +164,7 @@ impl Image {
     pub fn create_file_entry(&self, filename: String)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
-        for (index, e) in self.root_entries().iter().enumerate() {
+        for (index, e) in self.root_entries_all().iter().enumerate() {
             if !e.is_free() { continue; }
 
             let mut entry = RootEntry::new();
