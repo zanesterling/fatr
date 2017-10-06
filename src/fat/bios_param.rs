@@ -2,7 +2,7 @@ extern crate byteorder;
 
 use std::error;
 use std::fs;
-use std::io::Read;
+use std::io::{Read,SeekFrom,Seek};
 use std::path::Path;
 
 use self::byteorder::{LittleEndian,ByteOrder};
@@ -48,13 +48,13 @@ impl BIOSParam {
     }
 
     /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem image.
-    pub fn from_file<P: AsRef<Path>>(p: P)
+    pub fn from_file<P: AsRef<Path>>(p: P, o: usize)
         -> Result<BIOSParam, Box<error::Error>>
     {
         let mut boot_sector: Vec<u8> = vec![0; 512];
         let mut file = fs::File::open(p.as_ref())?;
-
-        try!(file.read_exact(&mut boot_sector));
+        file.seek(SeekFrom::Start(o as u64))?;
+        file.read_exact(&mut boot_sector)?;
 
         let mut params = BIOSParam::new();
 

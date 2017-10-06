@@ -1,7 +1,7 @@
 use std::error;
 use std::fs;
 use std::io;
-use std::io::{Read,Write};
+use std::io::{Read,Write,SeekFrom,Seek};
 use std::mem;
 use std::str;
 use std::path::Path;
@@ -32,10 +32,13 @@ pub struct Image {
 impl Image {
     /// Create a new blank FAT Image from a defined BPB
     fn new(bpb: BIOSParam, length: usize) -> Image {
-        let boot_sector_size = bpb.bytes_per_sector as usize * bpb.reserved_sectors as usize;
-        let bytes_per_fat = (bpb.sectors_per_fat * bpb.bytes_per_sector as u32) as usize;
+        let boot_sector_size = bpb.bytes_per_sector as usize
+            * bpb.reserved_sectors as usize;
+        let bytes_per_fat = (bpb.sectors_per_fat
+            * bpb.bytes_per_sector as u32) as usize;
         let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
-        let data_offset = boot_sector_size as usize + (bytes_per_fat * 2) as usize + bytes_per_root as usize;
+        let data_offset = boot_sector_size as usize
+            + (bytes_per_fat * 2) as usize + bytes_per_root as usize;
         let bytes_per_data_area = length - data_offset;
         Image {
             boot_sector: vec![0; boot_sector_size],
@@ -48,14 +51,39 @@ impl Image {
     }
 
     /// Create a new FAT Image from the specified file.
-    pub fn from_file<P: AsRef<Path>>(p: P)
+    pub fn from_file<P: AsRef<Path>>(image_fn: P)
         -> Result<Image, Box<error::Error>>
     {
-        let metadata = fs::metadata(p.as_ref())?;
-        let bpb = BIOSParam::from_file(p.as_ref())?;
+        let metadata = fs::metadata(image_fn.as_ref())?;
+        let bpb = BIOSParam::from_file(image_fn.as_ref(), 0)?;
 
-        let mut file = fs::File::open(p.as_ref())?;
+        let mut file = fs::File::open(image_fn.as_ref())?;
         let mut image = Image::new(bpb, metadata.len() as usize);
+
+        try!(file.read_exact(&mut image.boot_sector));
+        try!(file.read_exact(&mut image.fat_1));
+        try!(file.read_exact(&mut image.fat_2));
+        try!(file.read_exact(&mut image.root_dir));
+        try!(file.read_exact(&mut image.data_area));
+
+        Ok(image)
+    }
+
+    /// Create a new FAT Image from the specified file and offset.
+    pub fn from_file_offset<P: AsRef<Path>>(image_fn: P, start: usize, length: usize)
+        -> Result<Image, Box<error::Error>>
+    {
+        let metadata = fs::metadata(image_fn.as_ref())?;
+        let bpb = BIOSParam::from_file(image_fn.as_ref(), start)?;
+
+        if start + length > (metadata.len() as usize) {
+            return Err(From::from(format!("start + offset outside image bounds")));
+        }
+
+        let mut file = fs::File::open(image_fn.as_ref())?;
+        file.seek(SeekFrom::Start(start as u64))?;
+
+        let mut image = Image::new(bpb, length);
 
         try!(file.read_exact(&mut image.boot_sector));
         try!(file.read_exact(&mut image.fat_1));
