@@ -48,12 +48,12 @@ impl BIOSParam {
     }
 
     /// Extract the BIOS Parameter Block (BPB) from the FAT filesystem image.
-    pub fn from_file<P: AsRef<Path>>(p: P, o: usize)
+    pub fn from_file<P: AsRef<Path>>(image_fn: P, offset: usize)
         -> Result<BIOSParam, Box<error::Error>>
     {
         let mut boot_sector: Vec<u8> = vec![0; 512];
-        let mut file = fs::File::open(p.as_ref())?;
-        file.seek(SeekFrom::Start(o as u64))?;
+        let mut file = fs::File::open(image_fn.as_ref())?;
+        file.seek(SeekFrom::Start(offset as u64))?;
         file.read_exact(&mut boot_sector)?;
 
         let mut params = BIOSParam::new();
