@@ -76,7 +76,7 @@ impl Image {
         let metadata = fs::metadata(image_fn.as_ref())?;
         let bpb = BIOSParam::from_file(image_fn.as_ref(), start)?;
 
-        if start + length > (metadata.len() as usize) {
+        if metadata.is_file() && (start + length > (metadata.len() as usize)) {
             return Err(From::from(format!("start + offset outside image bounds")));
         }
 
