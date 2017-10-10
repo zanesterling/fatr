@@ -70,6 +70,13 @@ impl RootEntry {
         Ok(())
     }
 
+    pub fn set_size(&mut self, bytes: u32)
+        -> Result<(), Box<error::Error>>
+    {
+        self.file_size = bytes;
+        Ok(())
+    }
+
     pub fn is_read_only(&self)    -> bool { self.attrs & 0x01 == 0x01 }
     pub fn is_hidden(&self)       -> bool { self.attrs & 0x02 == 0x02 }
     pub fn is_system(&self)       -> bool { self.attrs & 0x04 == 0x04 }

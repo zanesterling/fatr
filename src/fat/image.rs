@@ -189,14 +189,15 @@ impl Image {
     }
 
     /// Create a new RootEntry within the Image with the specified filename.
-    pub fn create_file_entry(&self, filename: String)
+    pub fn create_file_entry(&self, filename: String, bytes: u32)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
         for (index, e) in self.root_entries_all().iter().enumerate() {
             if !e.is_free() { continue; }
 
             let mut entry = RootEntry::new();
-            try!(entry.set_filename(filename));
+            entry.set_filename(filename)?;
+            entry.set_size(bytes)?;
             return Ok((entry.clone(), index as u16));
         }
 
