@@ -258,16 +258,14 @@ impl Image {
         -> Result<(), Box<error::Error>>
     {
         let sector = sector - 2;
-        let bytes = sector * self.bpb_data.bytes_per_sector as usize;
-        if bytes >= self.data_area.len() {
+        let bytes_per_sector = self.bpb_data.bytes_per_sector as usize;
+        let start_byte = bytes_per_sector * sector;
+
+        if start_byte >= self.data_area.len() {
             return Err(From::from(format!("sector {} too high to write to", sector)))
         }
 
-        let mut target_slice = &mut self.data_area[
-            self.bpb_data.bytes_per_sector as usize * sector ..
-            self.bpb_data.bytes_per_sector as usize * (sector + 1)
-        ];
-
+        let mut target_slice = &mut self.data_area[start_byte..start_byte + data.len()];
         target_slice.copy_from_slice(data);
         Ok(())
     }
