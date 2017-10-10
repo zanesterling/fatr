@@ -12,15 +12,16 @@ pub struct RootEntry {
     pub creation_time: u16,
     pub creation_date: u16,
     pub last_access_date: u16,
-    _ignore: u16,
+    pub hi_first_lcluster: u16,
     pub last_write_time: u16,
     pub last_write_date: u16,
-    pub first_logical_cluster: u16,
+    pub lo_first_lcluster: u16,
     pub file_size: u32, // in bytes
 }
 
 #[allow(dead_code)]
 impl RootEntry {
+    /// Create a new empty FAT root directory entry.
     pub fn new() -> RootEntry {
         RootEntry {
             filename:  [' ' as u8; 8],
@@ -30,14 +31,15 @@ impl RootEntry {
             creation_time: 0,
             creation_date: 0,
             last_access_date: 0,
-            _ignore: 0,
+            hi_first_lcluster: 0,
             last_write_time: 0,
             last_write_date: 0,
-            first_logical_cluster: 0,
+            lo_first_lcluster: 0,
             file_size: 0,
         }
     }
 
+    /// Get the filename
     pub fn filename(&self) -> Result<String, Box<error::Error>> {
         let mut my_fn = self.filename.to_vec();
         let mut name = my_fn
@@ -53,6 +55,7 @@ impl RootEntry {
         }
     }
 
+    /// Set the filename
     pub fn set_filename(&mut self, filename: String)
         -> Result<(), Box<error::Error>>
     {
@@ -70,10 +73,29 @@ impl RootEntry {
         Ok(())
     }
 
+    /// Set the file size
     pub fn set_size(&mut self, bytes: u32)
         -> Result<(), Box<error::Error>>
     {
         self.file_size = bytes;
+        Ok(())
+    }
+
+    /// Gets the logical entry cluster
+    pub fn entry_cluster(&self) -> u32 {
+        (self.hi_first_lcluster as u32) << 16
+            | self.lo_first_lcluster as u32
+    }
+
+    /// Sets the logical entry cluster
+    pub fn set_entry_cluster(&mut self, cluster_num: u32)
+        -> Result<(), Box<error::Error>>
+    {
+        self.lo_first_lcluster = (cluster_num & 0xFFFF) as u16;
+        if cluster_num > u16::max_value() as u32 {
+            // Only supported on FAT32
+            self.hi_first_lcluster = (cluster_num >> 16) as u16;
+        }
         Ok(())
     }
 
@@ -142,9 +164,10 @@ impl Debug for RootEntry {
             .field("creation_time",         &self.creation_time)
             .field("creation_date",         &self.creation_date)
             .field("last_access_date",      &self.last_access_date)
+            .field("hi_first_lcluster",     &self.hi_first_lcluster)
             .field("last_write_time",       &self.last_write_time)
             .field("last_write_date",       &self.last_write_date)
-            .field("first_logical_cluster", &self.first_logical_cluster)
+            .field("lo_first_lcluster",      &self.lo_first_lcluster)
             .field("file_size",             &format!("{:#x}", self.file_size))
             .finish()
     }

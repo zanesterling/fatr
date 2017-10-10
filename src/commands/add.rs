@@ -51,7 +51,7 @@ pub fn add_file(args: &[String])
         }
 
         // Write chunk.
-        try!(image.write_data_sector(entry_index, &chunk));
+        image.write_data_sector(entry_index, &chunk)?;
     }
 
     image.save_file_entry(entry, index)?;
