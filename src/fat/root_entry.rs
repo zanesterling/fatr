@@ -57,11 +57,15 @@ impl RootEntry {
         -> Result<(), Box<error::Error>>
     {
         let parts: Vec<_> = filename.split('.').collect();
-        if parts.len() != 2 {
+        if parts.len() != 2 || parts[0].len() > 8 || parts[1].len() > 3 {
             return Err(From::from(format!("bad filename: \"{}\"", filename)));
         }
-        self.filename.clone_from_slice(parts[0].to_uppercase().as_bytes());
-        self.extension.clone_from_slice(parts[1].to_uppercase().as_bytes());
+
+        // Pad out short filenames to proper length
+        let new_fn = format!("{:8}", parts[0].to_uppercase());
+        let new_ext = format!("{:3}", parts[1].to_uppercase());
+        self.filename.copy_from_slice(new_fn.as_bytes());
+        self.extension.copy_from_slice(new_ext.as_bytes());
 
         Ok(())
     }
