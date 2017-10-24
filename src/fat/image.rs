@@ -95,10 +95,10 @@ impl Image {
     }
 
     /// Save the FAT filesystem image to the specified file.
-    pub fn save(&self, image_fn: String)
+    pub fn save<P: AsRef<Path>>(&self, image_fn: P)
         -> Result<(), io::Error>
     {
-        let mut file = fs::File::create(image_fn)?;
+        let mut file = fs::File::create(image_fn.as_ref())?;
 
         try!(file.write_all(&self.boot_sector));
         try!(file.write_all(&self.fat_1));
