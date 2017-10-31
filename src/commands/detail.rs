@@ -13,7 +13,10 @@ pub fn detail_file(args: &[String])
     let file_metadata = image.get_file_entry(args[1].clone())?;
     println!("{:#?}", file_metadata);
 
-    let mut cluster_num = file_metadata.first_logical_cluster;
+    // XXX: We ignore the u32 entry clusters for now and cast to u16.
+    // In the future we need to convert everything to u32 for FAT32 support.
+
+    let mut cluster_num = file_metadata.entry_cluster() as u16;
     const CLUSTER_NUMS_PER_LINE: usize = 8;
     'outer: loop {
         for _ in 0 .. CLUSTER_NUMS_PER_LINE {

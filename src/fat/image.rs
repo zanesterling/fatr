@@ -95,10 +95,10 @@ impl Image {
     }
 
     /// Save the FAT filesystem image to the specified file.
-    pub fn save(&self, image_fn: String)
+    pub fn save<P: AsRef<Path>>(&self, image_fn: P)
         -> Result<(), io::Error>
     {
-        let mut file = fs::File::create(image_fn)?;
+        let mut file = fs::File::create(image_fn.as_ref())?;
 
         try!(file.write_all(&self.boot_sector));
         try!(file.write_all(&self.fat_1));
@@ -189,14 +189,15 @@ impl Image {
     }
 
     /// Create a new RootEntry within the Image with the specified filename.
-    pub fn create_file_entry(&self, filename: String)
+    pub fn create_file_entry(&self, filename: String, bytes: u32)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
         for (index, e) in self.root_entries_all().iter().enumerate() {
             if !e.is_free() { continue; }
 
             let mut entry = RootEntry::new();
-            try!(entry.set_filename(filename));
+            entry.set_filename(filename)?;
+            entry.set_size(bytes)?;
             return Ok((entry.clone(), index as u16));
         }
 
@@ -258,16 +259,14 @@ impl Image {
         -> Result<(), Box<error::Error>>
     {
         let sector = sector - 2;
-        let bytes = sector * self.bpb_data.bytes_per_sector as usize;
-        if bytes >= self.data_area.len() {
+        let bytes_per_sector = self.bpb_data.bytes_per_sector as usize;
+        let start_byte = bytes_per_sector * sector;
+
+        if start_byte >= self.data_area.len() {
             return Err(From::from(format!("sector {} too high to write to", sector)))
         }
 
-        let mut target_slice = &mut self.data_area[
-            self.bpb_data.bytes_per_sector as usize * sector ..
-            self.bpb_data.bytes_per_sector as usize * (sector + 1)
-        ];
-
+        let mut target_slice = &mut self.data_area[start_byte..start_byte + data.len()];
         target_slice.copy_from_slice(data);
         Ok(())
     }

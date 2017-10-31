@@ -28,9 +28,11 @@ pub fn add_file(args: &[String])
 
     // Ensure input file exists.
     let file = fs::File::open(file_name)?;
+    let metadata = file.metadata()?;
 
     // Create a root dir entry.
-    let (entry, index) = image.create_file_entry(fat_file_name)?;
+    let (entry, index) =
+        image.create_file_entry(fat_file_name, metadata.len() as u32)?;
 
     // Get free FAT entries, fill sectors with file data.
     for chunk in &file.bytes().chunks(image.sector_size()) {
@@ -49,7 +51,7 @@ pub fn add_file(args: &[String])
         }
 
         // Write chunk.
-        try!(image.write_data_sector(entry_index, &chunk));
+        image.write_data_sector(entry_index, &chunk)?;
     }
 
     image.save_file_entry(entry, index)?;
