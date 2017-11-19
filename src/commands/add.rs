@@ -1,5 +1,6 @@
 use std::error;
 use std::fs;
+use std::path;
 use std::io::Read;
 
 use itertools::Itertools;
@@ -16,7 +17,10 @@ pub fn add_file(args: &[String])
     let fat_file_name = if args.len() > 2 {
         args[2].clone()
     } else {
-        file_name.clone()
+        match path::Path::new(&file_name).file_name() {
+            Some(n) => n.to_string_lossy().into_owned(),
+            None => file_name.clone(),
+        }
     };
 
     let mut image = fat::Image::from_file(image_name.clone())?;
