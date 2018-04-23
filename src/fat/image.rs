@@ -192,6 +192,11 @@ impl Image {
     pub fn create_file_entry(&self, filename: String, bytes: u32)
         -> Result<(RootEntry, u16), Box<error::Error>>
     {
+        match self.get_file_entry(filename.clone()) {
+            Ok(_) => return Err(From::from("entry already exists")),
+            Err(_) => {}
+        }
+
         for (index, e) in self.root_entries_all().iter().enumerate() {
             if !e.is_free() { continue; }
 
