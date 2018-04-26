@@ -10,7 +10,6 @@ use fat::RootEntry;
 use fat::BIOSParam;
 
 // Always the same
-const SECTORS_PER_ROOT: usize = 14;
 const BYTES_PER_ROOT_ENTRY: usize = 32;
 
 #[test]
@@ -36,15 +35,16 @@ impl Image {
             * bpb.reserved_sectors as usize;
         let bytes_per_fat = (bpb.sectors_per_fat
             * bpb.bytes_per_sector as u32) as usize;
-        let bytes_per_root = SECTORS_PER_ROOT * bpb.bytes_per_sector as usize;
+        let bytes_of_roots =
+            (bpb.max_roots as usize * BYTES_PER_ROOT_ENTRY) as usize;
         let data_offset = boot_sector_size as usize
-            + (bytes_per_fat * 2) as usize + bytes_per_root as usize;
+            + (bytes_per_fat * 2) as usize + bytes_of_roots as usize;
         let bytes_per_data_area = length - data_offset;
         Image {
             boot_sector: vec![0; boot_sector_size],
             fat_1: vec![0; bytes_per_fat],
             fat_2: vec![0; bytes_per_fat],
-            root_dir: vec![0; bytes_per_root],
+            root_dir: vec![0; bytes_of_roots],
             data_area: vec![0; bytes_per_data_area],
             bpb_data: bpb,
         }
